@@ -191,26 +191,26 @@ export default function DoctorsPage() {
         // Already submitted — find existing chat
         const chatRes = await chatsAPI.getMyChats();
         const chats = chatRes.data.data.chats || [];
+        // Match by doctor_id (which is user_id in the chats table)
         const match = chats.find((c) => c.doctor_id === doctor.user_id);
         chatId = match?.id || chats[0]?.id;
       } else {
-        // Save preferred doctor to step-3, then submit
-        let step3Draft = {};
-        try {
-          const draftRes = await onboardingAPI.getDraft();
-          const draft = draftRes.data.data.drafts?.find((d) => d.step_number === 3);
-          if (draft?.data) {
-            step3Draft = typeof draft.data === 'string' ? JSON.parse(draft.data) : draft.data;
-          }
-        } catch {}
-
-        await onboardingAPI.saveStep3({ ...step3Draft, preferred_doctor_id: doctor.id });
+        // Save preferred doctor to step-3 draft
+        await onboardingAPI.saveStep3({ preferred_doctor_id: doctor.id });
+        
+        // Submit onboarding
         const submitRes = await onboardingAPI.submit();
-        chatId = submitRes.data.data?.chat?.id;
+        const data = submitRes.data.data;
+        
+        // Check if chat was returned directly
+        chatId = data?.chat?.id;
 
         if (!chatId) {
+          // Fallback: search for the chat
           const chatRes = await chatsAPI.getMyChats();
-          chatId = chatRes.data.data.chats?.[0]?.id;
+          const chats = chatRes.data.data.chats || [];
+          const match = chats.find((c) => c.doctor_id === doctor.user_id);
+          chatId = match?.id || chats[0]?.id;
         }
         setAlreadyHasChat(true);
       }

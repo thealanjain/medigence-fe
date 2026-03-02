@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, MessageSquare, Users, Stethoscope, Clock, Activity } from 'lucide-react';
+import { Loader2, MessageSquare, Users, Stethoscope, Clock, Activity, Wifi, WifiOff } from 'lucide-react';
+import { useSocketEvent } from '@/hooks/useSocket';
+import { getOnlineUsers } from '@/services/socket';
 import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -25,6 +27,35 @@ export default function DashboardPage() {
     }).catch(() => {
       toast.error('Failed to load patient list');
     }).finally(() => setLoading(false));
+  }, []);
+
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+
+  // Listen for online/offline events
+  useSocketEvent('user_online', (data) => {
+    setOnlineUsers((prev) => new Set([...prev, data.userId]));
+  });
+
+  useSocketEvent('user_offline', (data) => {
+    setOnlineUsers((prev) => {
+      const next = new Set(prev);
+      next.delete(data.userId);
+      return next;
+    });
+  });
+
+  // Initial presence check
+  useEffect(() => {
+    const checkStatus = () => {
+      getOnlineUsers((res) => {
+        if (res?.success && Array.isArray(res.onlineUsers)) {
+          setOnlineUsers(new Set(res.onlineUsers));
+        }
+      });
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const stats = [
@@ -114,43 +145,42 @@ export default function DashboardPage() {
               {chats.map((chat) => {
                 const displayName = chat.patient_name || chat.patient_email?.split('@')[0] || 'Patient';
                 const unreadCount = parseInt(chat.unread_count || 0);
+                const isOnline = onlineUsers.has(chat.patient_id);
 
                 return (
                   <div
                     key={chat.id}
-                    className="py-4 flex items-center gap-4 hover:bg-muted/30 px-2 rounded-lg transition-colors"
+                    className="py-4 flex items-center gap-4 hover:bg-muted/30 px-2 rounded-lg transition-colors group"
                   >
-                    <Avatar className="h-11 w-11 ring-2 ring-primary/20 shrink-0">
-                      <AvatarFallback className="medical-gradient text-white font-semibold">
-                        {getInitials(displayName)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative shrink-0">
+                      <Avatar className="h-11 w-11 ring-2 ring-primary/20">
+                        <AvatarFallback className="medical-gradient text-white font-semibold">
+                          {getInitials(displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={cn(
+                          'absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white transition-colors duration-300',
+                          isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-300'
+                        )}
+                      />
+                    </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-medium text-foreground truncate">{displayName}</span>
+                        <span className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                          {displayName}
+                        </span>
+                        {isOnline && (
+                           <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 uppercase tracking-tighter">
+                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                             Online
+                           </span>
+                        )}
                         {unreadCount > 0 && (
-                          <Badge className="bg-primary text-primary-foreground text-xs px-1.5 py-0 h-5">
+                          <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0 h-4.5 font-bold">
                             {unreadCount}
                           </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {chat.specialization && (
-                          <span className="text-xs text-muted-foreground">
-                            {chat.specialization}
-                          </span>
-                        )}
-                        {chat.last_message_at && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(chat.last_message_at)}
-                          </span>
-                        )}
-                        {chat.last_message && (
-                          <span className="text-xs text-muted-foreground italic truncate max-w-xs">
-                            &ldquo;{chat.last_message}&rdquo;
-                          </span>
                         )}
                       </div>
                     </div>

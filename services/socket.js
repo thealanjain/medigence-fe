@@ -63,3 +63,8 @@ export const emitMarkRead = (chatId, callback) => {
   if (!socket) return;
   socket.emit('mark_read', { chatId }, callback);
 };
+
+export const getOnlineUsers = (callback) => {
+  if (!socket) return;
+  socket.emit('get_online_users', callback);
+};

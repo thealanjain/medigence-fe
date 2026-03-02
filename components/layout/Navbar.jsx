@@ -73,35 +73,60 @@ export default function Navbar() {
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 rounded-full px-2 hover:bg-primary/10">
-                <Avatar className="h-8 w-8 ring-2 ring-primary/20">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+              <Button 
+                variant="ghost" 
+                className="group relative flex items-center gap-3 rounded-full pl-1.5 pr-3 py-1.5 transition-all active:scale-95"
+              >
+                <Avatar className="h-8 w-8 ring-2 ring-primary/10 transition-all">
+                  <AvatarFallback className="medical-gradient text-white text-xs font-bold">
                     {getInitials(user?.email)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-sm font-medium leading-none">{user?.email?.split('@')[0]}</span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-[10px] px-1.5 py-0 mt-0.5 border-0 font-medium',
-                      role === 'PATIENT' ? 'text-blue-600 bg-blue-50' : 'text-teal-600 bg-teal-50'
-                    )}
-                  >
+                <div className="hidden sm:flex flex-col items-start text-left">
+                  <span className="text-xs font-bold text-foreground leading-tight tracking-tight">
+                    {user?.email?.split('@')[0]}
+                  </span>
+                  <span className={cn(
+                    "text-[9px] font-bold uppercase tracking-widest px-1 rounded-sm mt-0.5",
+                    role === 'PATIENT' ? "text-primary/70" : "text-teal-600"
+                  )}>
                     {role}
-                  </Badge>
+                  </span>
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel className="font-normal bg-white z-10">
-                <p className="text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-muted-foreground">{role}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
+
+            <DropdownMenuContent align="end" className="w-64 p-2 shadow-2xl border-border/50 rounded-2xl animate-in fade-in zoom-in duration-200">
+              <div className="p-3 mb-2 rounded-xl bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 ring-2 ring-white">
+                    <AvatarFallback className="medical-gradient text-white font-bold text-sm">
+                      {getInitials(user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{user?.email?.split('@')[0]}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
+                </div>
+                <div className="mt-2.5">
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "w-full justify-center text-[10px] font-bold py-0.5 border-0 rounded-md",
+                      role === 'PATIENT' ? "bg-blue-100 text-blue-700" : "bg-teal-100 text-teal-700"
+                    )}
+                  >
+                    {role} Account
+                  </Badge>
+                </div>
+              </div>
+
+              <DropdownMenuSeparator className="mx-1 my-1" />
+
+              <DropdownMenuItem onClick={logout} className="rounded-lg h-10 cursor-pointer group text-destructive transition-all mt-1">
+                <LogOut className="mr-2 h-4 w-4 transition-transform" />
+                <span className="font-bold text-sm">Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -13,7 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowLeft, Send, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { emitTypingStart, emitTypingStop, joinChat, sendSocketMessage, emitMarkRead } from '@/services/socket';
+import { 
+  emitTypingStart, 
+  emitTypingStop, 
+  joinChat, 
+  sendSocketMessage, 
+  emitMarkRead,
+  getOnlineUsers 
+} from '@/services/socket';
 
 function TypingIndicator() {
   return (
@@ -124,6 +131,25 @@ export default function ChatRoomPage() {
     if (userId === getPartnerId()) setPartnerOnline(false);
   }, [getPartnerId]));
 
+  // Initial presence check
+  useEffect(() => {
+    const partnerId = getPartnerId();
+    if (!partnerId) return;
+
+    const checkStatus = () => {
+      getOnlineUsers((res) => {
+        if (res?.success && Array.isArray(res.onlineUsers)) {
+          setPartnerOnline(res.onlineUsers.includes(partnerId));
+        }
+      });
+    };
+
+    checkStatus();
+    // Also re-check occasionally in case of socket sync issues
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, [getPartnerId]);
+
   const handleInputChange = (e) => {
     setInput(e.target.value);
     emitTypingStart(chatId);
@@ -155,20 +181,28 @@ export default function ChatRoomPage() {
     sendSocketMessage(chatId, text, (ack) => {
       setSending(false);
       if (ack?.success) {
-        setMessages((prev) =>
-          prev.map((m) =>
+        setMessages((prev) => {
+          const exists = prev.some((m) => m.id === ack.message.id);
+          if (exists) {
+            return prev.filter((m) => m.id !== optimisticId);
+          }
+          return prev.map((m) =>
             m.id === optimisticId ? { ...ack.message, _optimistic: false } : m
-          )
-        );
+          );
+        });
       } else {
         // Fallback: REST API
         messagesAPI.sendMessage({ chat_id: chatId, message_text: text })
           .then((res) => {
-            setMessages((prev) =>
-              prev.map((m) =>
+            setMessages((prev) => {
+              const exists = prev.some((m) => m.id === res.data.data.message.id);
+              if (exists) {
+                return prev.filter((m) => m.id !== optimisticId);
+              }
+              return prev.map((m) =>
                 m.id === optimisticId ? { ...res.data.data.message, _optimistic: false } : m
-              )
-            );
+              );
+            });
           })
           .catch(() => {
             toast.error('Failed to send message');
