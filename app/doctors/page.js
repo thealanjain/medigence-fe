@@ -125,12 +125,28 @@ export default function DoctorsPage() {
     async function loadData() {
       try {
         const docRes = await doctorsAPI.getAll();
-        setDoctors(docRes.data.data.doctors || []);
+        const fetchedDoctors = docRes.data.data.doctors || [];
+        setDoctors(fetchedDoctors);
+
+        // Initialize online users from API
+        const initialOnline = fetchedDoctors
+          .filter((d) => d.is_online)
+          .map((d) => d.user_id);
+        
+        setOnlineUsers((prev) => {
+          const next = new Set(prev);
+          initialOnline.forEach(id => next.add(id));
+          return next;
+        });
 
         // Also get initial online users from socket
         emit('get_online_users', (res) => {
           if (res?.success && res.onlineUsers) {
-            setOnlineUsers(new Set(res.onlineUsers));
+            setOnlineUsers((prev) => {
+              const next = new Set(prev);
+              res.onlineUsers.forEach(id => next.add(id));
+              return next;
+            });
           }
         });
 
@@ -269,33 +285,46 @@ export default function DoctorsPage() {
 
       {/* Confirmation Dialog */}
       <Dialog open={!!confirmDoctor} onOpenChange={() => setConfirmDoctor(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Connect with {confirmDoctor?.name}?</DialogTitle>
-            <DialogDescription>
-              This doctor will be assigned to you and a private chat will be opened.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center gap-4 py-2">
-            <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-              <AvatarFallback className="medical-gradient text-white font-semibold">
-                {getInitials(confirmDoctor?.name || 'Dr')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold">{confirmDoctor?.name}</p>
-              <p className="text-sm text-muted-foreground">{confirmDoctor?.specialization}</p>
+        <DialogContent className="sm:max-w-[440px] p-0 overflow-hidden border-none shadow-2xl">
+          <div className="medical-gradient h-2" />
+          <div className="p-6 pt-8 text-center">
+            <div className="mx-auto w-20 h-20 rounded-full medical-gradient p-1 mb-6 shadow-lg shadow-primary/20">
+              <Avatar className="h-full w-full border-4 border-white">
+                <AvatarFallback className="bg-white text-primary text-2xl font-bold">
+                  {getInitials(confirmDoctor?.name || 'Dr')}
+                </AvatarFallback>
+              </Avatar>
             </div>
+
+            <DialogHeader className="text-center sm:text-center space-y-2">
+              <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                Connect with {confirmDoctor?.name}?
+              </DialogTitle>
+              <DialogDescription className="text-base text-muted-foreground px-4">
+                You're about to start a private consultation with {confirmDoctor?.specialization}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-8 flex flex-col gap-3">
+              <Button
+                className="w-full h-12 text-base font-semibold medical-gradient border-0 text-white hover:opacity-90 shadow-md transition-all active:scale-[0.98]"
+                onClick={handleConfirmConnect}
+              >
+                Confirm & Connect
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="w-full h-11 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setConfirmDoctor(null)}
+              >
+                Maybe later
+              </Button>
+            </div>
+            
+            <p className="mt-6 text-[10px] text-muted-foreground uppercase tracking-widest font-medium opacity-60">
+              Secure & Private Consultation
+            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDoctor(null)}>Cancel</Button>
-            <Button
-              className="medical-gradient border-0 text-white hover:opacity-90"
-              onClick={handleConfirmConnect}
-            >
-              Confirm & Connect
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
