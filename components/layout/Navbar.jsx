@@ -17,6 +17,8 @@ import {
 import { getInitials } from '@/utils/helpers';
 import { Activity, MessageSquare, Users, LayoutDashboard, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useIsOnboardingCompleted from '@/hooks/isOnboardingCompleted';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const patientNav = [
   { href: '/onboarding', label: 'Onboarding', icon: User },
@@ -32,17 +34,25 @@ const doctorNav = [
 export default function Navbar() {
   const { user, role, logout, isAuthenticated } = useAuth();
   const pathname = usePathname();
+  const { isBordingCompleted, isPatientStatusLoading } = useIsOnboardingCompleted();
 
   if (!isAuthenticated) return null;
 
-  const navItems = role === 'PATIENT' ? patientNav : doctorNav;
+  let navItems = role === 'PATIENT' ? patientNav : doctorNav;
+
+  if (role === 'PATIENT' && !isPatientStatusLoading && isBordingCompleted) {
+    navItems = navItems.filter(item => item.href !== '/onboarding');
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/80 backdrop-blur-xl shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={role === 'PATIENT' ? '/onboarding' : '/dashboard'} className="flex items-center gap-2.5">
+          <Link 
+            href={role === 'PATIENT' ? (isPatientStatusLoading ? '#' : (isBordingCompleted ? '/doctors' : '/onboarding')) : '/dashboard'} 
+            className="flex items-center gap-2.5"
+          >
             <div className="medical-gradient rounded-lg p-1.5">
               <Activity className="h-5 w-5 text-white" />
             </div>
@@ -53,7 +63,7 @@ export default function Navbar() {
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map(({ href, label, icon: Icon }) => (
+            {!isPatientStatusLoading && navItems.map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href}>
                 <Button
                   variant="ghost"

@@ -8,9 +8,9 @@ import { useRequireAuth } from '@/hooks/useAuth';
 export default function ChatLayout({ children }) {
   const { loading } = useRequireAuth();
   const { role } = useAuth();
-  const { isBordingCompleted } = useIsOnboardingCompleted();
+  const { isBordingCompleted, isPatientStatusLoading } = useIsOnboardingCompleted();
 
-  if (loading) {
+  if (loading || isPatientStatusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="medical-gradient rounded-2xl p-4 animate-pulse">
